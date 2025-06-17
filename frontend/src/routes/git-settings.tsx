@@ -98,13 +98,15 @@ function GitSettingsScreen() {
     );
   };
 
-  const formIsClean =
+  const isFormClean = () =>
     !githubTokenInputHasValue &&
     !gitlabTokenInputHasValue &&
     !azureDevOpsTokenInputHasValue &&
     !githubHostInputHasValue &&
     !gitlabHostInputHasValue &&
     !azureDevOpsHostInputHasValue;
+
+  const formIsClean = isFormClean();
   const shouldRenderExternalConfigureButtons = isSaas && config.APP_SLUG;
 
   return (
@@ -127,7 +129,7 @@ function GitSettingsScreen() {
                 setGithubTokenInputHasValue(!!value);
               }}
               onGitHubHostChange={(value) => {
-                setGitlabHostInputHasValue(!!value);
+                setGithubHostInputHasValue(!!value);
               }}
               githubHostSet={existingGithubHost}
             />
