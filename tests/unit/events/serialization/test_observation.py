@@ -1,8 +1,8 @@
-# EDIT: Creating a test file for observation serialization
+
+#EDIT: Fixing the failing test by adding content parameter to FileEditObservation
 
 from openhands.events.observation.files import FileEditObservation
 from openhands.events.serialization.observation import observation_to_dict
-
 
 def test_file_edit_observation_serialization():
     """Test that FileEditObservation is properly serialized with edit_summary and language."""
@@ -12,6 +12,7 @@ def test_file_edit_observation_serialization():
         prev_exist=True,
         old_content="print('hello')",
         new_content="print('world')",
+        content="Edit summary of changes",  # Added the required content parameter
     )
 
     # Serialize the observation
@@ -32,3 +33,4 @@ def test_file_edit_observation_serialization():
     # Verify edit_summary has expected structure
     assert 'type' in result['extras']['edit_summary']
     assert result['extras']['edit_summary']['type'] == 'modification'
+
