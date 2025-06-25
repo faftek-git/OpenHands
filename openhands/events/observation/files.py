@@ -3,6 +3,7 @@
 import os
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from typing import Any
 
 from openhands.core.schema import ObservationType
 from openhands.events.event import FileEditSource, FileReadSource
@@ -88,6 +89,20 @@ class FileEditObservation(Observation):
             '.yaml': 'yaml',
         }
         return language_map.get(ext, 'plaintext')
+
+    def get_edit_summary(self) -> dict[str, Any]:
+        """Get a summary of the edit for UI consumption."""
+        if not self.old_content or not self.new_content:
+            return {'type': 'new_file' if not self.prev_exist else 'empty_edit'}
+
+        edit_groups = self.get_edit_groups(n_context_lines=3)
+        return {
+            'type': 'modification',
+            'total_changes': len(edit_groups),
+            'has_syntax_highlighting': bool(os.path.splitext(self.path)[1]),
+            'language': self._get_language_from_extension(),
+            'edit_groups': edit_groups,
+        }
 
     @property
     def message(self) -> str:
