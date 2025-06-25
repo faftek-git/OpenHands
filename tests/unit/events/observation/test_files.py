@@ -19,23 +19,23 @@ class TestFileObservations(unittest.TestCase):
 
     def test_file_read_observation(self):
         """Test the FileReadObservation class."""
-        obs = FileReadObservation(path='/test/file.txt')
+        obs = FileReadObservation(path='/test/file.txt', content='file content')
         self.assertEqual('I read the file /test/file.txt.', obs.message)
-        self.assertTrue(
-            str(obs).startswith('[Read from /test/file.txt is successful.\n')
+        self.assertEqual(
+            '[Read from /test/file.txt is successful.]\nfile content', str(obs)
         )
 
     def test_file_write_observation(self):
         """Test the FileWriteObservation class."""
-        obs = FileWriteObservation(path='/test/file.txt')
+        obs = FileWriteObservation(path='/test/file.txt', content='file content')
         self.assertEqual('I wrote to the file /test/file.txt.', obs.message)
-        self.assertTrue(
-            str(obs).startswith('[Write to /test/file.txt is successful.\n')
+        self.assertEqual(
+            '[Write to /test/file.txt is successful.]\nfile content', str(obs)
         )
 
     def test_file_edit_observation(self):
         """Test the FileEditObservation class."""
-        obs = FileEditObservation(path='/test/file.py')
+        obs = FileEditObservation(path='/test/file.py', content='file edit content')
         # Test basic properties
         self.assertEqual('I edited the file /test/file.py.', obs.message)
 
