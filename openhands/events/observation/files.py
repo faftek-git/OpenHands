@@ -1,5 +1,6 @@
 """File-related observation classes for tracking file operations."""
 
+import os
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 
@@ -53,7 +54,7 @@ class FileEditObservation(Observation):
 
     The .content property can either be:
       - Git diff in LLM-based editing mode
-      - the rendered message sent to the LLM in OH_ACI mode (e.g., "The file /path/to/file.txt is created with the provided content.")
+      - the rendered message sent to the LMM in OH_ACI mode (e.g., "The file /path/to/file.txt is created with the provided content.")
     """
 
     path: str = ''
@@ -68,6 +69,25 @@ class FileEditObservation(Observation):
     _diff_cache: str | None = (
         None  # Cache for the diff visualization, used in LLM-based editing mode
     )
+
+    def _get_language_from_extension(self) -> str:
+        """Determine programming language from file extension."""
+        ext = os.path.splitext(self.path)[1].lower()
+        language_map = {
+            '.py': 'python',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.jsx': 'jsx',
+            '.tsx': 'tsx',
+            '.html': 'html',
+            '.css': 'css',
+            '.json': 'json',
+            '.md': 'markdown',
+            '.sh': 'shell',
+            '.yml': 'yaml',
+            '.yaml': 'yaml',
+        }
+        return language_map.get(ext, 'plaintext')
 
     @property
     def message(self) -> str:
