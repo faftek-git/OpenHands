@@ -438,6 +438,7 @@ def test_file_edit_observation_serialization_with_summary():
     """Test that edit_summary field is included in serialized output."""
     # Create a FileEditObservation instance
     observation = FileEditObservation(
+        content='[Existing file /workspace/test.py is edited with 1 changes.] test_file_edit_observation_serialization_with_summary',
         path='/workspace/test.py',
         prev_exist=True,
         old_content='print("hello")',
@@ -465,6 +466,7 @@ def test_file_edit_observation_serialization_with_language():
     """Test that language field is included in serialized output."""
     # Create a FileEditObservation instance with a Python file
     observation = FileEditObservation(
+        content='[Existing file /workspace/test.py is edited with 1 changes.] test_file_edit_observation_serialization_with_language',
         path='/workspace/test.py',
         prev_exist=True,
         old_content='print("hello")',
@@ -473,6 +475,16 @@ def test_file_edit_observation_serialization_with_language():
     )
 
     # Serialize to dictionary
+    serialized = event_to_dict(observation)
+
+    # Verify language is present in extras
+    assert 'language' in serialized['extras'], (
+        'language field missing from serialization'
+    )
+    assert serialized['extras']['language'] == 'python', (
+        f"Expected language to be 'python', got {serialized['extras']['language']}"
+    )
+
 
 def test_file_edit_observation_gets_summary():
     """Test that get_edit_summary method works correctly."""
@@ -488,9 +500,10 @@ def test_file_edit_observation_gets_summary():
 
     # Get the edit summary directly
     edit_summary = observation.get_edit_summary()
-    assert isinstance(edit_summary, dict), "edit_summary should be a dictionary"
-    assert 'file_path' in edit_summary, "file_path missing from edit_summary"
-    assert 'type' in edit_summary, "type missing from edit_summary"
+    assert isinstance(edit_summary, dict), 'edit_summary should be a dictionary'
+    assert 'file_path' in edit_summary, 'file_path missing from edit_summary'
+    assert 'type' in edit_summary, 'type missing from edit_summary'
+
 
 def test_file_edit_observation_gets_language():
     """Test that _get_language_from_extension method works correctly."""
@@ -507,6 +520,7 @@ def test_file_edit_observation_gets_language():
     # Get the language directly
     language = observation._get_language_from_extension()
     assert language == 'python', f"Expected language to be 'python', got {language}"
+
 
 def test_file_edit_observation_backward_compatibility():
     """Test backward compatibility with existing observations."""
@@ -529,5 +543,3 @@ def test_file_edit_observation_backward_compatibility():
     # Serialize and deserialize
     observation_instance = event_from_dict(original_observation_dict)
     assert isinstance(observation_instance, FileEditObservation)
-
-
