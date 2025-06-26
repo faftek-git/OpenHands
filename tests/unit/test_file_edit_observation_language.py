@@ -1,8 +1,7 @@
-
 """Tests for FileEditObservation language detection."""
 
-import os
 from openhands.events.observation.files import FileEditObservation
+
 
 def test_common_extensions():
     """Test language detection for common file extensions."""
@@ -28,9 +27,10 @@ def test_common_extensions():
             prev_exist=True,
             old_content='',
             new_content='',
-            content=''
+            content='',
         )
         assert obs._get_language_from_extension() == expected_lang
+
 
 def test_unknown_extensions():
     """Test that unknown extensions return 'plaintext'."""
@@ -48,9 +48,10 @@ def test_unknown_extensions():
             prev_exist=True,
             old_content='',
             new_content='',
-            content=''
+            content='',
         )
         assert obs._get_language_from_extension() == 'plaintext'
+
 
 def test_case_insensitivity():
     """Test that language detection is case insensitive."""
@@ -69,7 +70,7 @@ def test_case_insensitivity():
             prev_exist=True,
             old_content='',
             new_content='',
-            content=''
+            content='',
         )
         assert obs._get_language_from_extension() == expected_lang
         # Verify that lowercase and uppercase extensions return the same language
@@ -78,19 +79,19 @@ def test_case_insensitivity():
             prev_exist=True,
             old_content='',
             new_content='',
-            content=''
+            content='',
         )
-        assert obs._get_language_from_extension() == obs_lower._get_language_from_extension()
+        assert (
+            obs._get_language_from_extension()
+            == obs_lower._get_language_from_extension()
+        )
+
 
 def test_edge_cases():
     """Test edge cases for language detection."""
     # Test empty extension (no dot)
     obs_no_ext = FileEditObservation(
-        path='test',
-        prev_exist=True,
-        old_content='',
-        new_content='',
-        content=''
+        path='test', prev_exist=True, old_content='', new_content='', content=''
     )
     assert obs_no_ext._get_language_from_extension() == 'plaintext'
 
@@ -100,7 +101,7 @@ def test_edge_cases():
         prev_exist=True,
         old_content='',
         new_content='',
-        content=''
+        content='',
     )
     assert obs_multi_dot._get_language_from_extension() == 'plaintext'
 
@@ -110,8 +111,6 @@ def test_edge_cases():
         prev_exist=True,
         old_content='',
         new_content='',
-        content=''
+        content='',
     )
     assert obs_long_ext._get_language_from_extension() == 'plaintext'
-
-
