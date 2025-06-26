@@ -3,6 +3,7 @@
 from openhands.events.event import FileEditSource
 from openhands.events.observation.files import FileEditObservation
 
+
 def test_file_edit_observation_basic():
     """Test basic properties of FileEditObservation."""
     obs = FileEditObservation(
@@ -20,6 +21,7 @@ def test_file_edit_observation_basic():
     assert obs.new_content == 'Hello\nNew World\n'
     assert obs.impl_source == FileEditSource.LLM_BASED_EDIT
     assert obs.message == 'I edited the file /test/file.txt.'
+
 
 def test_file_edit_observation_diff_cache():
     """Test that diff visualization is cached."""
@@ -40,6 +42,7 @@ def test_file_edit_observation_diff_cache():
     diff2 = obs.visualize_diff()
     assert diff1 == diff2
 
+
 def test_file_edit_observation_no_changes():
     """Test behavior when content hasn't changed."""
     content = 'Hello\nWorld\n'
@@ -54,6 +57,7 @@ def test_file_edit_observation_no_changes():
 
     diff = obs.visualize_diff()
     assert '(no changes detected' in diff
+
 
 def test_file_edit_observation_get_edit_groups():
     """Test the get_edit_groups method."""
@@ -81,6 +85,7 @@ def test_file_edit_observation_get_edit_groups():
     assert any('Line 2' in line for line in first_group['before_edits'])
     assert any('New Line 2' in line for line in first_group['after_edits'])
 
+
 def test_file_edit_observation_new_file():
     """Test behavior when editing a new file."""
     obs = FileEditObservation(
@@ -102,6 +107,7 @@ def test_file_edit_observation_new_file():
     # Test that trying to visualize diff for a new file works
     diff = obs.visualize_diff()
     assert diff is not None
+
 
 def test_file_edit_observation_context_lines():
     """Test diff visualization with different context line settings."""
@@ -128,21 +134,28 @@ def test_file_edit_observation_context_lines():
     )
     assert total_lines_2 > total_lines_0
 
-# New tests for the get_edit_summary method
+
+# Tests for the get_edit_summary method
 def test_edit_summary_new_file():
-    """Test edit summary when creating a new file (prev_exist=False)."""
+    """Test get_edit_summary() method with a new file."""
     obs = FileEditObservation(
-        path='/test/new_file.py',
+        path='/test/new_file.txt',
         prev_exist=False,
         old_content='',
-        new_content='print("Hello, world!")\n',
+        new_content='Hello\nWorld\n',
         impl_source=FileEditSource.LLM_BASED_EDIT,
-        content='',  # Initial content for new file
+        content='',  # Initial content is empty for new file
     )
 
     summary = obs.get_edit_summary()
-    assert summary['type'] == 'new_file'
-    # No language field in the summary for new files
+    assert 'file_path' in summary
+    assert summary['file_path'] == '/test/new_file.txt'
+    assert summary['is_new_file'] is True
+    assert 'num_lines' in summary
+    assert summary['num_lines'] == 3  # Two lines: "Hello" and "World"
+    assert 'changes' not in summary
+    assert summary['type'] == 'new_file'  # Also check the type field
+
 
 def test_edit_summary_modification():
     """Test edit summary when modifying an existing file."""
@@ -162,6 +175,11 @@ def test_edit_summary_modification():
     assert summary['type'] == 'modification'
     assert summary['total_changes'] > 0
     assert len(summary['edit_groups']) > 0
+    assert 'file_path' in summary
+    assert not summary['is_new_file']
+    assert 'changes' in summary
+    assert len(summary['changes']) > 0
+
 
 def test_edit_summary_no_changes():
     """Test edit summary when there are no changes."""
@@ -178,6 +196,13 @@ def test_edit_summary_no_changes():
 
     summary = obs.get_edit_summary()
     assert summary['type'] == 'modification'  # Actual behavior
+    assert 'file_path' in summary
+    assert not summary['is_new_file']
+    assert 'num_lines_added' in summary
+    assert 'num_lines_removed' in summary
+    assert summary['num_lines_added'] == 0
+    assert summary['num_lines_removed'] == 0
+
 
 def test_edit_summary_structure():
     """Test the structure of edit summary."""
@@ -199,6 +224,8 @@ def test_edit_summary_structure():
     assert 'has_syntax_highlighting' in summary
     assert 'language' in summary
     assert 'edit_groups' in summary
+    assert 'file_path' in summary
+    assert isinstance(summary['is_new_file'], bool)
 
     # Check edit groups structure
     for group in summary['edit_groups']:
@@ -206,6 +233,15 @@ def test_edit_summary_structure():
         assert 'after_edits' in group
         assert isinstance(group['before_edits'], list)
         assert isinstance(group['after_edits'], list)
+
+    # For existing files, these should be populated
+    assert 'changes' in summary
+    assert isinstance(summary['changes'], list)
+    for change in summary['changes']:
+        assert 'description' in change
+        assert isinstance(change['lines_added'], int)
+        assert isinstance(change['lines_removed'], int)
+
 
 def test_edit_summary_language_detection():
     """Test language detection based on file extension."""
@@ -236,3 +272,19 @@ def test_edit_summary_language_detection():
         assert summary['language'] == expected_lang
 
 
+def test_edit_summary_edge_cases():
+    """Test get_edit_summary() with edge cases like None content."""
+    obs = FileEditObservation(
+        path='/test/file.txt',
+        prev_exist=True,
+        old_content=None,
+        new_content='New content\n',
+        impl_source=FileEditSource.LLM_BASED_EDIT,
+        content='',  # Need to provide a non-None content
+    )
+
+    summary = obs.get_edit_summary()
+    assert 'file_path' in summary
+    assert not summary['is_new_file']
+    assert 'changes' in summary
+    assert len(summary['changes']) == 0
