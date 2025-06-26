@@ -35,7 +35,13 @@ class TestFileObservations(unittest.TestCase):
 
     def test_file_edit_observation(self):
         """Test the FileEditObservation class."""
-        obs = FileEditObservation(path='/test/file.py', content='file edit content')
+        # Need to provide content parameter for Observation base class
+        obs = FileEditObservation(
+            path='/test/file.py',
+            old_content='old code',
+            new_content='new code',
+            content='file edit content',
+        )
         # Test basic properties
         self.assertEqual('I edited the file /test/file.py.', obs.message)
 
