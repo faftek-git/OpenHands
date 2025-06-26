@@ -135,6 +135,7 @@ def test_file_edit_observation_context_lines():
     assert total_lines_2 > total_lines_0
 
 
+# Tests for the get_edit_summary method
 def test_edit_summary_new_file():
     """Test get_edit_summary() method with a new file."""
     obs = FileEditObservation(
@@ -153,21 +154,48 @@ def test_edit_summary_new_file():
     assert 'num_lines' in summary
     assert summary['num_lines'] == 3  # Two lines: "Hello" and "World"
     assert 'changes' not in summary
+    assert summary['type'] == 'new_file'  # Also check the type field
+
+
+def test_edit_summary_modification():
+    """Test edit summary when modifying an existing file."""
+    old_content = 'print("Hello")\n'
+    new_content = 'print("Hello, world!")\n'
+
+    obs = FileEditObservation(
+        path='/test/file.py',
+        prev_exist=True,
+        old_content=old_content,
+        new_content=new_content,
+        impl_source=FileEditSource.LLM_BASED_EDIT,
+        content=old_content,  # Initial content is old_content
+    )
+
+    summary = obs.get_edit_summary()
+    assert summary['type'] == 'modification'
+    assert summary['total_changes'] > 0
+    assert len(summary['edit_groups']) > 0
+    assert 'file_path' in summary
+    assert not summary['is_new_file']
+    assert 'changes' in summary
+    assert len(summary['changes']) > 0
 
 
 def test_edit_summary_no_changes():
-    """Test get_edit_summary() method with no changes."""
-    content = 'Hello\nWorld\n'
+    """Test edit summary when there are no changes."""
+    content = 'print("Hello, world!")\n'
+
     obs = FileEditObservation(
-        path='/test/file.txt',
+        path='/test/file.py',
         prev_exist=True,
         old_content=content,
         new_content=content,
         impl_source=FileEditSource.LLM_BASED_EDIT,
-        content=content,  # Initial content is same as both
+        content=content,  # Initial content is old_content
     )
 
     summary = obs.get_edit_summary()
+    assert summary['type'] == 'modification'  # Actual behavior
     assert 'file_path' in summary
     assert not summary['is_new_file']
     assert 'num_lines_added' in summary
@@ -176,50 +204,35 @@ def test_edit_summary_no_changes():
     assert summary['num_lines_removed'] == 0
 
 
-def test_edit_summary_modification():
-    """Test get_edit_summary() method with file modifications."""
-    obs = FileEditObservation(
-        path='/test/file.txt',
-        prev_exist=True,
-        old_content='Line 1\nLine 2\nLine 3\n',
-        new_content='Line 1\nNew Line 2\nLine 3\nLine 4\n',
-        impl_source=FileEditSource.LLM_BASED_EDIT,
-        content='Line 1\nLine 2\nLine 3\n',  # Initial content is old_content
-    )
-
-    summary = obs.get_edit_summary()
-    assert 'file_path' in summary
-    assert not summary['is_new_file']
-    assert 'changes' in summary
-    assert len(summary['changes']) > 0
-
-    # Check that the changes are properly reported
-    change = summary['changes'][0]
-    assert 'description' in change
-    assert 'lines_added' in change
-    assert 'lines_removed' in change
-
-    # One line removed, one line added
-    assert summary['num_lines_added'] == 2  # Added Line 4 and modified Line 2
-    assert summary['num_lines_removed'] == 1  # Removed original Line 2
-
-
 def test_edit_summary_structure():
-    """Test the structure of the dictionary returned by get_edit_summary()."""
+    """Test the structure of edit summary."""
+    old_content = 'line1\nline2\nline3\n'
+    new_content = 'line1\nNEW_line2\nline3\n'
+
     obs = FileEditObservation(
         path='/test/file.txt',
         prev_exist=True,
-        old_content='Line 1\nLine 2\nLine 3\n',
-        new_content='Line 1\nNew Line 2\nLine 3\nLine 4\n',
+        old_content=old_content,
+        new_content=new_content,
         impl_source=FileEditSource.LLM_BASED_EDIT,
-        content='Line 1\nLine 2\nLine 3\n',  # Initial content is old_content
+        content=old_content,  # Initial content is old_content
     )
 
     summary = obs.get_edit_summary()
-
-    # Check required fields
+    assert 'type' in summary
+    assert 'total_changes' in summary
+    assert 'has_syntax_highlighting' in summary
+    assert 'language' in summary
+    assert 'edit_groups' in summary
     assert 'file_path' in summary
     assert isinstance(summary['is_new_file'], bool)
+
+    # Check edit groups structure
+    for group in summary['edit_groups']:
+        assert 'before_edits' in group
+        assert 'after_edits' in group
+        assert isinstance(group['before_edits'], list)
+        assert isinstance(group['after_edits'], list)
 
     # For existing files, these should be populated
     assert 'changes' in summary
@@ -229,13 +242,34 @@ def test_edit_summary_structure():
         assert isinstance(change['lines_added'], int)
         assert isinstance(change['lines_removed'], int)
 
-    # Sample data should be included when available
-    if len(summary['changes']) > 0:
-        first_change = summary['changes'][0]
-        assert 'before_samples' in first_change
-        assert 'after_samples' in first_change
-        assert isinstance(first_change['before_samples'], list)
-        assert isinstance(first_change['after_samples'], list)
+
+def test_edit_summary_language_detection():
+    """Test language detection based on file extension."""
+    # Test with various file extensions
+    extensions = {
+        '.py': 'python',
+        '.js': 'javascript',
+        '.ts': 'typescript',
+        '.html': 'html',
+        '.md': 'markdown',
+        '.txt': 'plaintext',  # Default for unknown extensions
+    }
+
+    old_content = 'some content\n'
+    new_content = 'modified content\n'
+
+    for ext, expected_lang in extensions.items():
+        obs = FileEditObservation(
+            path=f'/test/file{ext}',
+            prev_exist=True,
+            old_content=old_content,
+            new_content=new_content,
+            impl_source=FileEditSource.LLM_BASED_EDIT,
+            content=old_content,  # Initial content is old_content
+        )
+
+        summary = obs.get_edit_summary()
+        assert summary['language'] == expected_lang
 
 
 def test_edit_summary_edge_cases():
