@@ -16,44 +16,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Run lint on the frontend code
-  lint-frontend:
-    name: Lint frontend
-    runs-on: blacksmith-4vcpu-ubuntu-2204
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Node.js 20
-        uses: useblacksmith/setup-node@v5
-        with:
-          node-version: 20
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm install --frozen-lockfile
-      - name: Lint, TypeScript compilation, and translation checks
-        run: |
-          cd frontend
-          npm run lint
-          npm run make-i18n && tsc
-          npm run check-translation-completeness
-
-  # Run lint on the python code
-  lint-python:
-    name: Lint python
-    runs-on: blacksmith-4vcpu-ubuntu-2204
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up python
-        uses: useblacksmith/setup-python@v6
-        with:
-          python-version: 3.12
-          cache: 'pip'
-      - name: Install pre-commit
-        run: pip install pre-commit==3.7.0
-      - name: Run pre-commit hooks
-        run: pre-commit run --all-files --show-diff-on-failure --config ./dev_config/python/.pre-commit-config.yaml
+  # Call the reusable lint workflow
+  lint:
+    uses: ./.github/workflows/lint-reusable.yml
+    with:
+      lint-python: true
+      lint-frontend: true
 
   # Check version consistency across documentation
   check-version-consistency:
