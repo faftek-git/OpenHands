@@ -16,10 +16,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Run lint on the python code first
+  lint-python:
+    name: Lint python
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up python
+        uses: useblacksmith/setup-python@v6
+        with:
+          python-version: 3.12
+          cache: 'pip'
+      - name: Install pre-commit
+        run: pip install pre-commit==3.7.0
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files --show-diff-on-failure --config ./dev_config/python/.pre-commit-config.yaml
+
   # Run python unit tests on Linux
   test-on-linux:
     name: Python Unit Tests on Linux
     runs-on: blacksmith-4vcpu-ubuntu-2204
+    needs: lint-python
     env:
       INSTALL_DOCKER: '0' # Set to '0' to skip Docker installation
     strategy:
@@ -56,6 +75,7 @@ jobs:
   test-on-windows:
     name: Python Tests on Windows
     runs-on: windows-latest
+    needs: lint-python
     strategy:
       matrix:
         python-version: ['3.12']
