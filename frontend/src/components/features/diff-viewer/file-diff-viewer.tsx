@@ -17,6 +17,27 @@ interface LoadingSpinnerProps {
 function LoadingSpinner({ className }: LoadingSpinnerProps) {
   return (
     <div className="flex items-center justify-center">
+
+import { DiffEditor, Monaco } from "@monaco-editor/react";
+import React from "react";
+import { editor as editor_t } from "monaco-editor";
+import { LuFileDiff, LuFileMinus, LuFilePlus } from "react-icons/lu";
+import { IconType } from "react-icons/lib";
+import { GitChangeStatus } from "#/api/open-hands.types";
+import { getLanguageFromPath } from "#/utils/get-language-from-path";
+import { cn } from "#/utils/utils";
+import ChevronUp from "#/icons/chveron-up.svg?react";
+import { useGitDiff } from "#/hooks/query/use-get-diff";
+import { useTranslation } from "react-i18next";
+
+interface LoadingSpinnerProps {
+  className?: string;
+}
+
+// TODO: Move out of this file and replace the current spinner with this one
+function LoadingSpinner({ className }: LoadingSpinnerProps) {
+  return (
+    <div className="flex items-center justify-center">
       <div
         className={cn(
           "animate-spin rounded-full border-4 border-gray-200 border-t-blue-500",
@@ -43,6 +64,7 @@ export interface FileDiffViewerProps {
 }
 
 export function FileDiffViewer({ path, type }: FileDiffViewerProps) {
+  const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = React.useState(true);
   const [editorHeight, setEditorHeight] = React.useState(400);
   const diffEditorRef = React.useRef<editor_t.IStandaloneDiffEditor>(null);
@@ -58,6 +80,8 @@ export function FileDiffViewer({ path, type }: FileDiffViewerProps) {
 
     return path;
   }, [path, type]);
+}
+
 
   const {
     data: diff,
@@ -119,6 +143,28 @@ export function FileDiffViewer({ path, type }: FileDiffViewerProps) {
     const modifiedEditor = editor.getModifiedEditor();
 
     originalEditor.onDidContentSizeChange(updateEditorHeight);
+  };
+
+  const status = (type === "U" ? STATUS_MAP.A : STATUS_MAP[type]) || "?";
+
+  let statusIcon: React.ReactNode;
+  if (typeof status === "string") {
+    statusIcon = <span>{status}</span>;
+  } else {
+    const StatusIcon = status; // now it's recognized as a component
+    statusIcon = <StatusIcon className="w-5 h-5" />;
+  }
+
+  let statusText: string;
+  if (isAdded) {
+    statusText = t("FILE_EDIT$NEW_FILE_CREATED");
+  } else if (isDeleted) {
+    statusText = t("FILE_EDIT$FILE_DELETED");
+  } else {
+    // For modified files, we'll use the changes count translation
+    statusText = t("FILE_EDIT$CHANGES_COUNT", { count: 1 });
+  }
+
     modifiedEditor.onDidContentSizeChange(updateEditorHeight);
   };
 
@@ -147,6 +193,7 @@ export function FileDiffViewer({ path, type }: FileDiffViewerProps) {
           {isFetchingData && <LoadingSpinner className="w-5 h-5" />}
           {!isFetchingData && statusIcon}
           <strong className="w-full truncate">{filePath}</strong>
+          <span className="text-sm text-gray-400 ml-2">{statusText}</span>
           <button data-testid="collapse" type="button">
             <ChevronUp
               className={cn(

@@ -1,6 +1,55 @@
 {
+    "FILE_EDIT$NEW_FILE_CREATED": {
+        "en": "New file created",
+        "ja": "新しいファイルが作成されました",
+        "zh-CN": "已创建新文件",
+        "zh-TW": "已建立新檔案",
+        "ko-KR": "새 파일 생성됨",
+        "no": "Ny fil opprettet",
+        "it": "Nuovo file creato",
+        "pt": "Novo arquivo criado",
+        "es": "Archivo nuevo creado",
+        "ar": "تم إنشاء ملف جديد",
+        "fr": "Nouveau fichier créé",
+        "tr": "Yeni dosya oluşturuldu",
+        "de": "Neue Datei erstellt",
+        "uk": "Створено новий файл"
+    },
+    "FILE_EDIT$FILE_DELETED": {
+        "en": "File deleted",
+        "ja": "ファイルが削除されました",
+        "zh-CN": "文件已删除",
+        "zh-TW": "檔案已刪除",
+        "ko-KR": "파일 삭제됨",
+        "no": "Fil slettet",
+        "it": "File eliminato",
+        "pt": "Arquivo excluído",
+        "es": "Archivo eliminado",
+        "ar": "تم حذف الملف",
+        "fr": "Fichier supprimé",
+        "tr": "Dosya silindi",
+        "de": "Datei gelöscht",
+        "uk": "Файл видалено"
+    },
+    "FILE_EDIT$CHANGES_COUNT": {
+        "en": "{{count}} change{{count === 1 ? '' : 's'}}",
+        "ja": "{{count}} 個の変更{{count === 1 ? '' : ''}}",
+        "zh-CN": "{{count}} 个更改{{count === 1 ? '' : ''}}",
+        "zh-TW": "{{count}} 個變更{{count === 1 ? '' : ''}}",
+        "ko-KR": "{{count}}개의 변경사항{{count === 1 ? '' : ''}}",
+        "no": "{{count}} endring{{count === 1 ? '' : 'er'}}",
+        "it": "{{count}} modifiche{{count === 1 ? '' : 'a'}}",
+        "pt": "{{count}} alteração{{count === 1 ? '' : 's'}}",
+        "es": "{{count}} cambio{{count === 1 ? '' : 's'}}",
+        "ar": "{{count}} تغيير{{count === 1 ? '' : ''}}",
+        "fr": "{{count}} modification{{count === 1 ? '' : 's'}}",
+        "tr": "{{count}} değişiklik{{count === 1 ? '' : ''}}",
+        "de": "{{count}} Änderung{{count === 1 ? '' : 'en'}}",
+        "uk": "{{count}} зміна{{count === 1 ? '' : ''}}"
+    },
+
     "STATUS$WEBSOCKET_CLOSED": {
-        "en": "The WebSocket connection was closed.",
+
         "ja": "WebSocket接続が閉じられました。",
         "zh-CN": "WebSocket连接已关闭。",
         "zh-TW": "WebSocket連接已關閉。",
