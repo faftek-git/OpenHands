@@ -1,16 +1,12 @@
 # Workflow that runs frontend unit tests
 name: Run Frontend Unit Tests
 
-# * Always run on "main"
-# * Run on PRs that have changes in the "frontend" folder or this workflow
+# Only run on "main" branch pushes
+# PRs are handled by pr-validation.yml
 on:
   push:
     branches:
       - main
-  pull_request:
-    paths:
-      - 'frontend/**'
-      -  '.github/workflows/fe-unit-tests.yml'
 
 # If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
 concurrency:

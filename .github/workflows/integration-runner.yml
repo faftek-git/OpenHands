@@ -25,7 +25,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: echo "Skipping prerequisite checks for non-PR runs"
 
-      - name: Check Workflow Status
+      - name: Check PR Validation Workflow Status
         if: github.event_name == 'pull_request' && github.event.label.name == 'integration-test'
         uses: actions/github-script@v7
         with:
@@ -33,60 +33,26 @@ jobs:
             const { owner, repo } = context.repo;
             const sha = context.payload.pull_request.head.sha;
 
-            // Check lint workflow
-            console.log(`Checking lint workflow status for commit ${sha}`);
-            const lintRuns = await github.rest.actions.listWorkflowRunsForRepo({
+            // Check PR validation workflow
+            console.log(`Checking PR validation workflow status for commit ${sha}`);
+            const prValidationRuns = await github.rest.actions.listWorkflowRunsForRepo({
               owner,
               repo,
               head_sha: sha,
-              workflow_id: 'lint.yml'
+              workflow_id: 'pr-validation.yml'
             });
 
-            if (lintRuns.data.total_count > 0) {
-              const latestLintRun = lintRuns.data.workflow_runs[0];
-              console.log(`Latest lint workflow run status: ${latestLintRun.status}, conclusion: ${latestLintRun.conclusion}`);
+            if (prValidationRuns.data.total_count > 0) {
+              const latestRun = prValidationRuns.data.workflow_runs[0];
+              console.log(`Latest PR validation workflow run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
 
-              if (latestLintRun.status === 'completed' && latestLintRun.conclusion !== 'success') {
-                core.setFailed(`Lint workflow failed or was cancelled. Please fix lint issues before running integration tests.`);
+              if (latestRun.status !== 'completed' || latestRun.conclusion !== 'success') {
+                core.setFailed(`PR validation workflow has not completed successfully. Please fix any issues before running integration tests.`);
                 return;
               }
-            }
-
-            // Check Python unit tests workflow
-            console.log(`Checking Python unit tests workflow status for commit ${sha}`);
-            const pyTestRuns = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              head_sha: sha,
-              workflow_id: 'py-unit-tests.yml'
-            });
-
-            if (pyTestRuns.data.total_count > 0) {
-              const latestPyTestRun = pyTestRuns.data.workflow_runs[0];
-              console.log(`Latest Python unit tests workflow run status: ${latestPyTestRun.status}, conclusion: ${latestPyTestRun.conclusion}`);
-
-              if (latestPyTestRun.status === 'completed' && latestPyTestRun.conclusion !== 'success') {
-                core.setFailed(`Python unit tests workflow failed or was cancelled. Please fix test issues before running integration tests.`);
-                return;
-              }
-            }
-
-            // Check Frontend unit tests workflow (only if there are frontend changes)
-            const feTestRuns = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              head_sha: sha,
-              workflow_id: 'fe-unit-tests.yml'
-            });
-
-            if (feTestRuns.data.total_count > 0) {
-              const latestFeTestRun = feTestRuns.data.workflow_runs[0];
-              console.log(`Latest Frontend unit tests workflow run status: ${latestFeTestRun.status}, conclusion: ${latestFeTestRun.conclusion}`);
-
-              if (latestFeTestRun.status === 'completed' && latestFeTestRun.conclusion !== 'success') {
-                core.setFailed(`Frontend unit tests workflow failed or was cancelled. Please fix test issues before running integration tests.`);
-                return;
-              }
+            } else {
+              core.setFailed(`No PR validation workflow runs found for this commit. Please wait for the PR validation workflow to complete.`);
+              return;
             }
 
   run-integration-tests:
