@@ -16,9 +16,49 @@ env:
   N_PROCESSES: 10 # Global configuration for number of parallel processes for evaluation
 
 jobs:
+  # Check if linting and unit tests passed (only for PR-triggered runs)
+  check-prerequisites:
+    name: Check Linting and Unit Tests Status
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    steps:
+      - name: Skip checks for non-PR runs
+        if: github.event_name != 'pull_request'
+        run: echo "Skipping prerequisite checks for non-PR runs"
+
+      - name: Check PR Validation Workflow Status
+        if: github.event_name == 'pull_request' && github.event.label.name == 'integration-test'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request.head.sha;
+
+            // Check PR validation workflow
+            console.log(`Checking PR validation workflow status for commit ${sha}`);
+            const prValidationRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              workflow_id: 'pr-validation.yml'
+            });
+
+            if (prValidationRuns.data.total_count > 0) {
+              const latestRun = prValidationRuns.data.workflow_runs[0];
+              console.log(`Latest PR validation workflow run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
+
+              if (latestRun.status !== 'completed' || latestRun.conclusion !== 'success') {
+                core.setFailed(`PR validation workflow has not completed successfully. Please fix any issues before running integration tests.`);
+                return;
+              }
+            } else {
+              core.setFailed(`No PR validation workflow runs found for this commit. Please wait for the PR validation workflow to complete.`);
+              return;
+            }
+
   run-integration-tests:
     if: github.event.label.name == 'integration-test' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: blacksmith-4vcpu-ubuntu-2204
+    needs: check-prerequisites
     permissions:
       contents: "read"
       id-token: "write"

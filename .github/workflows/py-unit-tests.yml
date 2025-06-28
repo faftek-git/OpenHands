@@ -1,9 +1,8 @@
 # Workflow that runs python unit tests
 name: Run Python Unit Tests
 
-# The jobs in this workflow are required, so they must run at all times
-# * Always run on "main"
-# * Always run on PRs
+# Only run on "main" branch pushes
+# PRs are handled by pr-validation.yml
 on:
   push:
     branches:
@@ -16,10 +15,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Check if linting passed
+  lint-check:
+    name: Check Linting Status
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    steps:
+      - name: Check Lint Workflow Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request ? context.payload.pull_request.head.sha : context.sha;
+
+            console.log(`Checking lint workflow status for commit ${sha}`);
+
+            // Get workflow runs for the lint workflow
+            const workflowRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              workflow_id: 'lint.yml'
+            });
+
+            if (workflowRuns.data.total_count === 0) {
+              console.log('No lint workflow runs found for this commit. Proceeding with caution.');
+              return;
+            }
+
+            // Check the status of the most recent run
+            const latestRun = workflowRuns.data.workflow_runs[0];
+            console.log(`Latest lint workflow run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
+
+            if (latestRun.status === 'completed' && latestRun.conclusion !== 'success') {
+              core.setFailed(`Lint workflow failed or was cancelled. Please fix lint issues before running tests.`);
+            }
+
   # Run python unit tests on Linux
   test-on-linux:
     name: Python Unit Tests on Linux
     runs-on: blacksmith-4vcpu-ubuntu-2204
+    needs: [lint-check]
     env:
       INSTALL_DOCKER: '0' # Set to '0' to skip Docker installation
     strategy:
@@ -56,6 +91,7 @@ jobs:
   test-on-windows:
     name: Python Tests on Windows
     runs-on: windows-latest
+    needs: [lint-check]
     strategy:
       matrix:
         python-version: ['3.12']

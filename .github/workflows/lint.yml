@@ -1,14 +1,12 @@
 # Workflow that runs lint on the frontend and python code
 name: Lint
 
-# The jobs in this workflow are required, so they must run at all times
-# Always run on "main"
-# Always run on PRs
+# Only run on "main" branch pushes
+# PRs are handled by pr-validation.yml
 on:
   push:
     branches:
     - main
-  pull_request:
 
 # If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
 concurrency:
