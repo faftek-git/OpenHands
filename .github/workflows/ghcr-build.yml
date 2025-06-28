@@ -28,7 +28,26 @@ env:
   RELEVANT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
+  # Run Python linting first
+  lint-python:
+    name: Lint Python
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up python
+        uses: useblacksmith/setup-python@v6
+        with:
+          python-version: 3.12
+          cache: 'pip'
+      - name: Install pre-commit
+        run: pip install pre-commit==3.7.0
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files --show-diff-on-failure --config ./dev_config/python/.pre-commit-config.yaml
+
   define-matrix:
+    needs: lint-python
     runs-on: blacksmith
     outputs:
       base_image: ${{ steps.define-base-images.outputs.base_image }}
@@ -106,7 +125,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: define-matrix
+    needs: [define-matrix]
     strategy:
       matrix:
         base_image: ${{ fromJson(needs.define-matrix.outputs.base_image) }}
