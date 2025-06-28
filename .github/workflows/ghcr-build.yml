@@ -106,7 +106,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: define-matrix
+    needs: [define-matrix]
     strategy:
       matrix:
         base_image: ${{ fromJson(needs.define-matrix.outputs.base_image) }}
