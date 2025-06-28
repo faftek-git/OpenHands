@@ -18,10 +18,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Check if linting passed
+  lint-check:
+    name: Check Linting Status
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    steps:
+      - name: Check Lint Workflow Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request ? context.payload.pull_request.head.sha : context.sha;
+
+            console.log(`Checking lint workflow status for commit ${sha}`);
+
+            // Get workflow runs for the lint workflow
+            const workflowRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              workflow_id: 'lint.yml'
+            });
+
+            if (workflowRuns.data.total_count === 0) {
+              console.log('No lint workflow runs found for this commit. Proceeding with caution.');
+              return;
+            }
+
+            // Check the status of the most recent run
+            const latestRun = workflowRuns.data.workflow_runs[0];
+            console.log(`Latest lint workflow run status: ${latestRun.status}, conclusion: ${latestRun.conclusion}`);
+
+            if (latestRun.status === 'completed' && latestRun.conclusion !== 'success') {
+              core.setFailed(`Lint workflow failed or was cancelled. Please fix lint issues before running tests.`);
+            }
+
   # Run frontend unit tests
   fe-test:
     name: FE Unit Tests
     runs-on: blacksmith-4vcpu-ubuntu-2204
+    needs: [lint-check]
     strategy:
       matrix:
         node-version: [20, 22]

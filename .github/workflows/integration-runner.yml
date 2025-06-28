@@ -16,9 +16,83 @@ env:
   N_PROCESSES: 10 # Global configuration for number of parallel processes for evaluation
 
 jobs:
+  # Check if linting and unit tests passed (only for PR-triggered runs)
+  check-prerequisites:
+    name: Check Linting and Unit Tests Status
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    steps:
+      - name: Skip checks for non-PR runs
+        if: github.event_name != 'pull_request'
+        run: echo "Skipping prerequisite checks for non-PR runs"
+
+      - name: Check Workflow Status
+        if: github.event_name == 'pull_request' && github.event.label.name == 'integration-test'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.payload.pull_request.head.sha;
+
+            // Check lint workflow
+            console.log(`Checking lint workflow status for commit ${sha}`);
+            const lintRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              workflow_id: 'lint.yml'
+            });
+
+            if (lintRuns.data.total_count > 0) {
+              const latestLintRun = lintRuns.data.workflow_runs[0];
+              console.log(`Latest lint workflow run status: ${latestLintRun.status}, conclusion: ${latestLintRun.conclusion}`);
+
+              if (latestLintRun.status === 'completed' && latestLintRun.conclusion !== 'success') {
+                core.setFailed(`Lint workflow failed or was cancelled. Please fix lint issues before running integration tests.`);
+                return;
+              }
+            }
+
+            // Check Python unit tests workflow
+            console.log(`Checking Python unit tests workflow status for commit ${sha}`);
+            const pyTestRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              workflow_id: 'py-unit-tests.yml'
+            });
+
+            if (pyTestRuns.data.total_count > 0) {
+              const latestPyTestRun = pyTestRuns.data.workflow_runs[0];
+              console.log(`Latest Python unit tests workflow run status: ${latestPyTestRun.status}, conclusion: ${latestPyTestRun.conclusion}`);
+
+              if (latestPyTestRun.status === 'completed' && latestPyTestRun.conclusion !== 'success') {
+                core.setFailed(`Python unit tests workflow failed or was cancelled. Please fix test issues before running integration tests.`);
+                return;
+              }
+            }
+
+            // Check Frontend unit tests workflow (only if there are frontend changes)
+            const feTestRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              workflow_id: 'fe-unit-tests.yml'
+            });
+
+            if (feTestRuns.data.total_count > 0) {
+              const latestFeTestRun = feTestRuns.data.workflow_runs[0];
+              console.log(`Latest Frontend unit tests workflow run status: ${latestFeTestRun.status}, conclusion: ${latestFeTestRun.conclusion}`);
+
+              if (latestFeTestRun.status === 'completed' && latestFeTestRun.conclusion !== 'success') {
+                core.setFailed(`Frontend unit tests workflow failed or was cancelled. Please fix test issues before running integration tests.`);
+                return;
+              }
+            }
+
   run-integration-tests:
     if: github.event.label.name == 'integration-test' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: blacksmith-4vcpu-ubuntu-2204
+    needs: check-prerequisites
     permissions:
       contents: "read"
       id-token: "write"
